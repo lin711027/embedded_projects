@@ -2,11 +2,15 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <filesystem>
+#ifdef TARGETBOARD_IMX8MM
+    #include <dirent.h>
+#else 
+    #include <filesystem>
+    namespace fs = std::filesystem;
+#endif
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
 
-namespace fs = std::filesystem;
 
 int main() {
     const std::string model_path = "../stdconv_2221_ly34_NoQ-cnn_tcn_whole_260220.onnx";
@@ -20,6 +24,7 @@ int main() {
 
     float mean[3] = {0.6378846f, 0.6091322f, 0.6168187f};
     float stdv[3] = {0.30198434f, 0.31222337f, 0.32536325f};
+    std::cout << "git test : this case will fail to process" << std::endl;
 #if 0
     std::vector<std::string> files;
     for (auto &p : fs::directory_iterator(folder_path)) {
