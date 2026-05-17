@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(gpio_toggle_project)
+set(CMAKE_CXX_STANDARD 17)
+add_executable(gpio_toggle main.cpp gpio_toggle.cpp reader.cpp writer.cpp)
+target_link_libraries(gpio_toggle gpiod)
