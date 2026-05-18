@@ -1,7 +1,5 @@
 #include "main.h"
-#include <mutex>
-#include <condition_variable>
-namespace fs = std::filesystem;
+
 std::mutex mtx;
 std::condition_variable cvbatch;
 std::string folder_path = "../samples/Biking_g01_c01";
@@ -11,6 +9,11 @@ std::string folder_path = "../samples/Biking_g01_c01";
     const int W = 320;
     const int num_classes = 10;
 std::vector<float> input_data(1 * T * C * H * W); //真正的影像資料記憶體    
+std::vector<std::string> files;
+    float mean[3] = {0.485f, 0.456f, 0.406f};
+    float stdv[3] = {0.229f, 0.224f, 0.225f};  
+const std::string model_path = "../MobileNetv3-large-last1-smot01-TCN-4l-0.4D_2221_lyNoGN_NoQ-cnn_tcn_whole_260509.onnx";
+
 void read_img_task()
 {
     while (1){
@@ -19,7 +22,7 @@ void read_img_task()
         cv::Mat img = cv::imread(files[t], cv::IMREAD_COLOR);
         if(img.empty()){
             std::cerr << "Failed to read captured frame " << std::endl;
-            return -1;
+            return ;
         }
         cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
         cv::resize(img, img, cv::Size(W,H));
@@ -131,12 +134,7 @@ void inference_task()
 }
 int main(int argc, char** argv)
 {
-    const std::string model_path = "../MobileNetv3-large-last1-smot01-TCN-4l-0.4D_2221_lyNoGN_NoQ-cnn_tcn_whole_260509.onnx";
     //const std::string folder_path = "../samples/Biking_g01_c01";
-
-    float mean[3] = {0.485f, 0.456f, 0.406f};
-    float stdv[3] = {0.229f, 0.224f, 0.225f};  
-    
     if(argc > 1)
     {
         std::cout << argv[1] << std::endl;
@@ -152,7 +150,22 @@ int main(int argc, char** argv)
             folder_path="../samples/Biking_g01_c01";
     }
     std::cout << folder_path.c_str() << std::endl;
-    std::vector<std::string> files;
+#ifdef TARGETBOARD_IMX8MM
+    DIR* dir = opendir(folder_path.c_str());
+    if (dir) 
+    {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) 
+        {
+            std::string name = entry->d_name;
+            if (name.size() >= 4 && name.substr(name.size() - 4) == ".jpg") 
+            {
+                files.push_back(folder_path + "/" + name);
+            }
+        }
+        closedir(dir);
+    }
+#else    
     for(auto & p : fs::directory_iterator(folder_path))
     {
         if(p.path().extension() == ".jpg")
@@ -161,6 +174,7 @@ int main(int argc, char** argv)
             //std::cout << p.path().string() << std::endl;
         }
     }
+#endif
     std::sort(files.begin(), files.end());
 
     if(files.size()<T){
@@ -169,7 +183,7 @@ int main(int argc, char** argv)
     }
     std::thread read_img_thread(read_img_task);
     std::thread inference_thread(inference_task);
-    whiel(1);
+    while(1);
     read_img_thread.join();
     inference_thread.join();
     return 0;
